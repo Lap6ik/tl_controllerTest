@@ -49,9 +49,9 @@ class ControllerTest(QtWidgets.QMainWindow):
             itemName = item.shortName()
             allItems.append(itemName)
         notSelected =[item for item in allItems if item not in selectedNames]
-        print ('selected Items: {0}'.format(selectedNames))
-        print ('all  Items are: {0}'.format(allItems))
-        print ('not  selected : {0}\n'.format(notSelected))
+        # print ('selected Items: {0}'.format(selectedNames))
+        # print ('all  Items are: {0}'.format(allItems))
+        # print ('not  selected : {0}\n'.format(notSelected))
 
         for item in allItems:
             if item in selectedNames:

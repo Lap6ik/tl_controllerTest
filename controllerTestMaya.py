@@ -9,19 +9,25 @@ reload(controllerTest)
 
 class ControllerTestMaya(QtCore.QObject):
     objectSelected = QtCore.Signal(list)
+    def __init__(self, parent = None):
+        super(ControllerTestMaya, self).__init__(parent) 
+        OpenMaya.MEventMessage.addEventCallback('SelectionChanged', self.emit_selchanged)
+
+
+    def emit_selchanged(self,_):
+        #a = pm.selected(type = 'mesh')
+        self.objectSelected.emit(pm.selected(type = 'mesh'))
+        print ('Signal Emited From Maya')
 
 window = None
+cont = ControllerTestMaya()
 def show():
     global window
     if window is None:
-        cont = ControllerTestMaya()
+        
         parent = get_maya_window()
-        window = controllerTest.ControllerTest(parent)
+        window = controllerTest.ControllerTest(parent)       
 
-        def emit_selchanged(_):
-            cont.objectSelected.emit(pm.selected(type = 'mesh'))
-            print ('Signal Emited From Maya')
-        OpenMaya.MEventMessage.addEventCallback('SelectionChanged', emit_selchanged)
     window.show()
 
 def get_maya_window():
