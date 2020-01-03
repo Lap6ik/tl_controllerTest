@@ -11,13 +11,25 @@ class ControllerTestMaya(QtCore.QObject):
     objectSelected = QtCore.Signal(list)
     def __init__(self, parent = None):
         super(ControllerTestMaya, self).__init__(parent) 
-        OpenMaya.MEventMessage.addEventCallback('SelectionChanged', self.emit_selchanged)
 
+        self.callBackId = []
+
+        OpenMaya.MEventMessage.addEventCallback('SelectionChanged', self.emit_selchanged)
+        self.objectSelected.connect(self.printF)
 
     def emit_selchanged(self,_):
-        #a = pm.selected(type = 'mesh')
-        self.objectSelected.emit(pm.selected(type = 'mesh'))
         print ('Signal Emited From Maya')
+        self.objectSelected.emit(pm.selected(type = 'mesh'))
+    
+        callBackId = OpenMaya.MEventMessage.currentCallbackId()
+        print (callBackId)
+        #OpenMaya.MEventMessage.removeCallback(callBackId)
+        # b=OpenMaya.MEventMessage.currentCallbackId()
+        # print b
+
+    def printF(self):
+        print ('here must be a UI changing script\n')
+        
 
 window = None
 cont = ControllerTestMaya()
@@ -29,7 +41,7 @@ def show():
         window = controllerTest.ControllerTest(parent)       
 
     window.show()
-
+    
 def get_maya_window():
     '''Return the QMainWindow for the main maya window'''
 

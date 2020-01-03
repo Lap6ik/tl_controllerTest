@@ -10,7 +10,7 @@ class ControllerTest(QtWidgets.QMainWindow):
 
     def __init__(self, parent = None):    
         super(ControllerTest, self).__init__(parent) 
-        #self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
         self.shapeNodes = []
         self.currentItemLabel = []
