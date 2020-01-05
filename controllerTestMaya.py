@@ -9,6 +9,7 @@ reload(controllerTest)
 
 class ControllerTestMaya(QtCore.QObject):
     objectSelected = QtCore.Signal(list)
+    windowClosed = QtCore.Signal(int)
     def __init__(self, parent = None):
         super(ControllerTestMaya, self).__init__(parent) 
 
@@ -21,22 +22,20 @@ class ControllerTestMaya(QtCore.QObject):
         print ('Signal Emited From Maya')
         self.objectSelected.emit(pm.selected(type = 'mesh'))
     
-        callBackId = OpenMaya.MEventMessage.currentCallbackId()
-        print (callBackId)
-        #OpenMaya.MEventMessage.removeCallback(callBackId)
-        # b=OpenMaya.MEventMessage.currentCallbackId()
-        # print b
+        self.callBackId = OpenMaya.MEventMessage.currentCallbackId()
+        #OpenMaya.MEventMessage.removeCallback(self.callBackId)
 
     def printF(self):
         print ('here must be a UI changing script\n')
-        
-
+ 
 window = None
-cont = ControllerTestMaya()
+cont = ControllerTestMaya() 
+print ('/n   printing callBackID outside maya')           
+
 def show():
     global window
     if window is None:
-        
+
         parent = get_maya_window()
         window = controllerTest.ControllerTest(parent)       
 
