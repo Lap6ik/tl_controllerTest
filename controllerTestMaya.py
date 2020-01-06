@@ -9,11 +9,13 @@ reload(controllerTest)
 
 class ControllerTestMaya(QtCore.QObject):
     objectSelected = QtCore.Signal(list)
-    windowClosed = QtCore.Signal(int)
+
     def __init__(self, parent = None):
+
         super(ControllerTestMaya, self).__init__(parent) 
 
         self.callBackId = []
+        self.a = 10.1
 
         OpenMaya.MEventMessage.addEventCallback('SelectionChanged', self.emit_selchanged)
         self.objectSelected.connect(self.printF)
@@ -27,10 +29,13 @@ class ControllerTestMaya(QtCore.QObject):
 
     def printF(self):
         print ('here must be a UI changing script\n')
- 
+
 window = None
+
 cont = ControllerTestMaya() 
+
 print ('/n   printing callBackID outside maya')           
+print (cont.a)
 
 def show():
     global window
@@ -40,7 +45,7 @@ def show():
         window = controllerTest.ControllerTest(parent)       
 
     window.show()
-    
+
 def get_maya_window():
     '''Return the QMainWindow for the main maya window'''
 

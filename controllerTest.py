@@ -1,12 +1,14 @@
 from PySide2 import QtCore, QtGui, QtWidgets
 import pymel.core as pm
+import time
 
 import controllerTestUI as ui
 reload(ui)
 
 class ControllerTest(QtWidgets.QMainWindow):
 
-    itemClicked = QtCore.Signal(list,list)
+    itemClickedSignal = QtCore.Signal(list,list)
+    windowClosedSignal = QtCore.Signal(str)
 
     def __init__(self, parent = None):    
         super(ControllerTest, self).__init__(parent) 
@@ -15,6 +17,7 @@ class ControllerTest(QtWidgets.QMainWindow):
         self.shapeNodes = []
         self.currentItemLabel = []
         self.listItems = []
+        self.windowClosed = None
 
         self.ui = ui.ControllerTestUI()
         self.ui.create_window(self)
@@ -24,19 +27,31 @@ class ControllerTest(QtWidgets.QMainWindow):
         # (1.1)we define our own signal
         self.ui.shapeNodesListWidget.itemClicked.connect(self._onItemClicked)
         self.ui.shapeNodesListWidget.itemClicked.connect(self._onSelectionUpdate)
+        self.windowClosedSignal.connect(self.__printD)
+
+    def __printD(self):
+        print (self.windowClosed)
+
+
+    def closeEvent(self, *event):
+        print (self)
+        print (self.isVisible())
+        self.windowClosed = 'Window Closed'
+        self.windowClosedSignal.emit(self.windowClosed)
+
 
     def __updateShapeNodesListWidget(self):
-        self.ui.shapeNodesListWidget.clear()
-        self.ui.shapeNodesListWidget.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        self.shapeNodes = pm.ls(exactType = 'mesh')
-        for obj in self.shapeNodes:
-            self.ui.shapeNodesListWidget.addItem(str(obj))
-            self.listItems.append(obj)          
+            self.ui.shapeNodesListWidget.clear()
+            self.ui.shapeNodesListWidget.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+            self.shapeNodes = pm.ls(exactType = 'mesh')
+            for obj in self.shapeNodes:
+                self.ui.shapeNodesListWidget.addItem(str(obj))
+                self.listItems.append(obj)          
     
     #(1.2)signal object clicked is emited with list argument 
     def _onItemClicked(self):
         self.selectedItems = self.ui.shapeNodesListWidget.selectedItems()
-        self.itemClicked.emit(self.listItems,self.selectedItems)
+        self.itemClickedSignal.emit(self.listItems,self.selectedItems)
 
     def _onSelectionUpdate(self):
         selectedNames = []
