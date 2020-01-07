@@ -1,50 +1,5 @@
 from PySide2 import QtWidgets, QtGui, QtCore
-import maya.OpenMayaUI as OpenMayaUI
-import maya.OpenMaya as OpenMaya
 from shiboken2 import wrapInstance 	
-import pymel.core as pm
-
-import controllerTest
-reload(controllerTest)
-
-class ControllerTestMaya(QtCore.QObject):
-    objectSelected = QtCore.Signal(list)
-
-    def __init__(self, parent = None):
-
-        super(ControllerTestMaya, self).__init__(parent) 
-
-        self.callBackId = []
-        self.a = 10.1
-
-        OpenMaya.MEventMessage.addEventCallback('SelectionChanged', self.emit_selchanged)
-        self.objectSelected.connect(self.printF)
-
-    def emit_selchanged(self,_):
-        print ('Signal Emited From Maya')
-        self.objectSelected.emit(pm.selected(type = 'mesh'))
-    
-        self.callBackId = OpenMaya.MEventMessage.currentCallbackId()
-        #OpenMaya.MEventMessage.removeCallback(self.callBackId)
-
-    def printF(self):
-        print ('here must be a UI changing script\n')
-
-window = None
-
-cont = ControllerTestMaya() 
-
-print ('/n   printing callBackID outside maya')           
-print (cont.a)
-
-def show():
-    global window
-    if window is None:
-
-        parent = get_maya_window()
-        window = controllerTest.ControllerTest(parent)       
-
-    window.show()
 
 def get_maya_window():
     '''Return the QMainWindow for the main maya window'''
