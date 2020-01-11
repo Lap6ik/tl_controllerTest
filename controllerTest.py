@@ -25,57 +25,47 @@ def doOpenUI(delete=False):
             dial = ControllerTest()
             return dial
 
-class Worker(QtCore.QRunnable):
-    '''
-    This class defines signals available from a running working thread
-    '''
-    def __init__(self):
-        super(Worker, self).__init__()
-        OpenMaya.MEventMessage.addEventCallback('SelectionChanged', self._callbackHappens)
-
-    def _callbackHappens(self,_):
-        print ('the callback is cought')
-
-    def run(self):
-        print ('running from Worker separate thread')
-
 class ControllerTest(QtWidgets.QMainWindow):
 
     itemSelectedSignal = QtCore.Signal(str)    
-    objectSelectedSignal = QtCore.Signal(list)
+    objectSelectedSignal = QtCore.Signal(str)
     windowClosedSignal = QtCore.Signal(str)
+    objectSelectionFromUIFinished = QtCore.Signal(str)
 
     def __init__(self, parent = None):    
         super(ControllerTest, self).__init__(parent) 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-        ## threadPool
-        self.threadPool = QtCore.QThreadPool()
-        print("Multithreading with maximum %d threads" % self.threadPool.maxThreadCount())
-
         self.allItems = []
         self.selectedItems = []
         self.notSelectedItems = []
 
-        self.callBackId = None
+        self.selectionCallBackId = None
         self.shapeNodes = []
         self.currentItemLabel = []        
         self.windowClosed = None
 
         self.ui = ui.ControllerTestUI()
         self.ui.create_window(self)
-        
+
         self.__updateUiItemsList()
+        #add functions for selecting items of the UI based on maya
+        #add callbacks for deleting and adding new node
+        self.__createSelectionCallBack()
 
         self.ui.shapeNodesListWidget.itemClicked.connect(self._uiItemClicked)
-        #self.ui.shapeNodesListWidget.itemClicked.connect(self.__fromUiObjectSelect)
         self.itemSelectedSignal.connect(self.__fromUiObjectSelect)
+        self.objectSelectionFromUIFinished.connect(self.__createSelectionCallBack)
+        self.objectSelectedSignal.connect(self.__updateUiSelection)
 
-        #maya callBacks
-        #OpenMaya.MEventMessage.addEventCallback('SelectionChanged', self._mayaObjectSelected)
-        self.objectSelectedSignal.connect(self._fromMayaItemSelection)
         self.windowClosedSignal.connect(self.__windowWasClosed)
         self.windowClosedSignal.connect(self.close)
+
+    def __createSelectionCallBack(self):
+        self.selectionCallBackId = OpenMaya.MEventMessage.addEventCallback('SelectionChanged', self._signalSelectionChanged) 
+
+    def __removeSelectionCallBack(self):
+         OpenMaya.MEventMessage.removeCallback(self.selectionCallBackId)
     '''
     The functiom filles the text filed of the UI with the Objects we have in Maya
     self.allItems - is the all items added to the listWidget
@@ -87,8 +77,7 @@ class ControllerTest(QtWidgets.QMainWindow):
         for obj in self.shapeNodes:
             self.ui.shapeNodesListWidget.addItem(str(obj))
             self.allItems.append(obj)  
-        #self.__setItemSelection()
-
+        
     '''
     UI affecting Maya functions
     self.selectedItems - all items selected in the listWidget
@@ -96,6 +85,7 @@ class ControllerTest(QtWidgets.QMainWindow):
     '''
     #(1.2)signal item clicked is emited with list argument 
     def _uiItemClicked(self):
+        self.__removeSelectionCallBack()
         listSelectedItems = self.ui.shapeNodesListWidget.selectedItems()
         self.selectedItems = []
         for item in listSelectedItems:
@@ -109,51 +99,30 @@ class ControllerTest(QtWidgets.QMainWindow):
 
     def __fromUiObjectSelect(self):
         for item in self.allItems:
+
             if item in self.selectedItems:
                 pm.select(item, add = True)
             elif item in self.notSelectedItems:
                 pm.select(item, deselect = True) 
             else:
-                print ('Item exists but neither selected nor deselected')
+                print ('Item exists but neither selected nor deselected') 
 
-        worker = Worker()
-        self.threadPool.start(worker)
-
+        self.objectSelectionFromUIFinished.emit('objectSelectionFromUIFinished')
+        
     '''
     Maya callbacks affecting UI functions
     self.allObjects - all objects in maya
     self.selectedObjects - all objects selected in maya
     self.notSelectedObjects - all objects not selected in maya
     '''    
-    def _mayaObjectSelected(self,_):
-        self.objectSelectedSignal.emit(self.allItems)
-        self.callBackId = OpenMaya.MEvenckId = OpenMaya.MEventMessage.currentCallbackId()
+    def _signalSelectionChanged(self,_):
+        self.objectSelectedSignal.emit('Object selected')
+        print ('selection in Maya changed')
 
-    def _fromMayaItemSelection(self):
-        print ('we are having maya callback')
-        # selectedObjectsShapes = []
-        # allObjectsShapes = []
-        # allObjects = pm.ls(exactType='mesh')
-        # for obj in allObjects:
-        #     allObjShape = obj.shortName(stripNamespace = True)
-        #     allObjectsShapes.append(allObjShape)
-            
-        # selectedObjects = pm.ls(selection = True, exactType = 'transform')
-        # for obj in selectedObjects:
-        #     objectShape = pm.listRelatives(obj, children = True, shapes = True)         
-        #     b = objectShape[0].shortName(stripNamespace = True)
-        #     selectedObjectsShapes.append(b)
+    def __updateUiSelection(self):
         
-        # #compare two lists of selection
-        # notSelectedObjects = [obj for obj in allObjectsShapes if obj not in selectedObjectsShapes]
-        # print ('not selected at the moment%s'%notSelectedObjects)
-
-        # for obj in selectedObjectsShapes:
-        #     item = self.ui.shapeNodesListWidget.findItems(str(obj),QtCore.Qt.MatchContains)
-        #     print ('selected item found%s'%item)
-
     '''
-    If the UI closing we close the 
+    If the UI closing we remove the callback
     '''
     def closeEvent(self, *event):
         #print (self.isVisible())
@@ -162,7 +131,7 @@ class ControllerTest(QtWidgets.QMainWindow):
 
     def __windowWasClosed(self):
         print (self.windowClosed)
-        #OpenMaya.MEventMessage.removeCallback(self.callBackId)
+        self.__removeSelectionCallBack()
 
 
 if __name__ == '__main__':
