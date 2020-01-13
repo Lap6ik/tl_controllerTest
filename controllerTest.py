@@ -36,10 +36,6 @@ class ControllerTest(QtWidgets.QMainWindow):
         super(ControllerTest, self).__init__(parent) 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-        self.allItems = []
-        self.selectedItems = []
-        self.notSelectedItems = []
-
         self.selectionCallBackId = None
         self.shapeNodes = []
         self.currentItemLabel = []        
@@ -49,11 +45,11 @@ class ControllerTest(QtWidgets.QMainWindow):
         self.ui.create_window(self)
 
         self.__updateUiItemsList()
-        #add functions for selecting items of the UI based on maya
+        self.__updateUiSelection()
         #add callbacks for deleting and adding new node
         self.__createSelectionCallBack()
 
-        self.ui.shapeNodesListWidget.itemClicked.connect(self._uiItemClicked)
+        self.ui.nodesListWidget.itemClicked.connect(self._uiItemClicked)
         self.itemSelectedSignal.connect(self.__fromUiObjectSelect)
         self.objectSelectionFromUIFinished.connect(self.__createSelectionCallBack)
         self.objectSelectedSignal.connect(self.__updateUiSelection)
@@ -71,12 +67,13 @@ class ControllerTest(QtWidgets.QMainWindow):
     self.allItems - is the all items added to the listWidget
     '''
     def __updateUiItemsList(self):
-        self.ui.shapeNodesListWidget.clear()
-        self.ui.shapeNodesListWidget.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        self.shapeNodes = pm.ls(exactType = 'mesh')
-        for obj in self.shapeNodes:
-            self.ui.shapeNodesListWidget.addItem(str(obj))
-            self.allItems.append(obj)  
+        self.ui.nodesListWidget.clear()
+        self.ui.nodesListWidget.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        meshObjects = pm.ls(dag =True, type = 'mesh')
+        for obj in meshObjects:
+            transformNode = pm.listRelatives(obj, parent = True)
+            print (transformNode)
+            self.ui.nodesListWidget.addItem(str(obj)) 
         
     '''
     UI affecting Maya functions
@@ -86,44 +83,70 @@ class ControllerTest(QtWidgets.QMainWindow):
     #(1.2)signal item clicked is emited with list argument 
     def _uiItemClicked(self):
         self.__removeSelectionCallBack()
-        listSelectedItems = self.ui.shapeNodesListWidget.selectedItems()
-        self.selectedItems = []
-        for item in listSelectedItems:
-            selectedItem = item.text()
-            self.selectedItems.append(selectedItem)
-        print ('self.allItems %s'%self.allItems)
-        print ('self.selectedItems %s'%self.selectedItems)
-        self.notSelectedItems = [item for item in self.allItems if item not in self.selectedItems]
-        print ('self.notSelectedItems %s\n'%self.notSelectedItems)
-        self.itemSelectedSignal.emit('Items Selected')
+        self.itemSelectedSignal.emit('Items Selected')       
 
     def __fromUiObjectSelect(self):
-        for item in self.allItems:
+        itemsInUi = []
+        selectedItems = []
+        notSelectedItems = []
 
-            if item in self.selectedItems:
-                pm.select(item, add = True)
-            elif item in self.notSelectedItems:
-                pm.select(item, deselect = True) 
+        selectedMeshes = pm.ls(selection = True, dag = True, type = 'mesh')
+        print (selectedMeshes)
+
+        for index in range(self.ui.nodesListWidget.count()):
+             itemsInUi.append(self.ui.nodesListWidget.item(index))
+
+        for item in itemsInUi:
+            if item.isSelected():
+                selectedItems.append(item)
             else:
-                print ('Item exists but neither selected nor deselected') 
+                notSelectedItems.append(item)
+        
+        #this does not work
+        for item in selectedItems:
+            if item.text in selectedMeshes:
+                pass
+            else:
+                pm.select(item.text(), add = True)
+        
+        for item in notSelectedItems:
+            if item.text in selectedMeshes:
+                print ('we are here')
+                pm.select(item.text(), deselect = True)
+            else:
+                pass
 
         self.objectSelectionFromUIFinished.emit('objectSelectionFromUIFinished')
         
     '''
     Maya callbacks affecting UI functions
-    self.allObjects - all objects in maya
-    self.selectedObjects - all objects selected in maya
-    self.notSelectedObjects - all objects not selected in maya
     '''    
     def _signalSelectionChanged(self,_):
         self.objectSelectedSignal.emit('Object selected')
-        print ('selection in Maya changed')
 
     def __updateUiSelection(self):
+        itemsInUi = []
+        selectedMeshes = pm.ls(selection = True, dag = True, type = 'mesh')
         
-    '''
-    If the UI closing we remove the callback
-    '''
+        for index in range(self.ui.nodesListWidget.count()):
+            itemsInUi.append(self.ui.nodesListWidget.item(index))
+
+        itemsToSelect = [item for item in itemsInUi if item.text() in selectedMeshes]
+        itemsToDeselect = [item for item in itemsInUi if item.text() not in selectedMeshes]
+
+        for item in itemsToSelect:
+            if self.ui.nodesListWidget.isItemSelected(item):
+                pass
+            elif not self.ui.nodesListWidget.isItemSelected(item):
+                print ('item to select %s'%item)
+                item.setSelected(True)
+        for item in itemsToDeselect:
+            if self.ui.nodesListWidget.isItemSelected(item):
+                item.setSelected(False)
+            elif not self.ui.nodesListWidget.isItemSelected(item):
+                pass
+           
+
     def closeEvent(self, *event):
         #print (self.isVisible())
         self.windowClosed = 'Window Closing'
