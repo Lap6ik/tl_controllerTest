@@ -70,10 +70,11 @@ class ControllerTest(QtWidgets.QMainWindow):
         self.ui.nodesListWidget.clear()
         self.ui.nodesListWidget.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         meshObjects = pm.ls(dag =True, type = 'mesh')
+        #print (meshObjects)
         for obj in meshObjects:
-            transformNode = pm.listRelatives(obj, parent = True)
+            transformNode = pm.PyNode(obj)
             print (transformNode)
-            self.ui.nodesListWidget.addItem(str(obj)) 
+            self.ui.nodesListWidget.addItem(str(transformNode)) 
         
     '''
     UI affecting Maya functions
