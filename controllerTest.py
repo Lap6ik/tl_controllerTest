@@ -73,7 +73,7 @@ class ControllerTest(QtWidgets.QMainWindow):
         #print (meshObjects)
         for obj in meshObjects:
             transformNode = pm.PyNode(obj)
-            print (transformNode)
+            #print (transformNode)
             self.ui.nodesListWidget.addItem(str(transformNode)) 
         
     '''
@@ -90,30 +90,35 @@ class ControllerTest(QtWidgets.QMainWindow):
         itemsInUi = []
         selectedItems = []
         notSelectedItems = []
+        a = None
+        b = None
+        c = None
 
-        selectedMeshes = pm.ls(selection = True, dag = True, type = 'mesh')
-        print (selectedMeshes)
+        selectedMeshes = pm.ls(selection = True, dag = True, type = 'transform')
 
         for index in range(self.ui.nodesListWidget.count()):
              itemsInUi.append(self.ui.nodesListWidget.item(index))
 
         for item in itemsInUi:
             if item.isSelected():
-                selectedItems.append(item)
+                a = pm.listRelatives(item.text(), parent = True)
+                selectedItems.append(a[0])
             else:
-                notSelectedItems.append(item)
-        
-        #this does not work
+                b = pm.listRelatives(item.text(), parent = True)
+                notSelectedItems.append(b[0])
+
         for item in selectedItems:
-            if item.text in selectedMeshes:
+            if item in selectedMeshes:
                 pass
             else:
-                pm.select(item.text(), add = True)
+                print ('we are here')
+                pm.select(item, add = True)
         
         for item in notSelectedItems:
-            if item.text in selectedMeshes:
-                print ('we are here')
-                pm.select(item.text(), deselect = True)
+            if item in selectedMeshes:
+                print ('to deselect%s'%item)
+
+                pm.select(item, deselect = True)
             else:
                 pass
 
@@ -139,7 +144,7 @@ class ControllerTest(QtWidgets.QMainWindow):
             if self.ui.nodesListWidget.isItemSelected(item):
                 pass
             elif not self.ui.nodesListWidget.isItemSelected(item):
-                print ('item to select %s'%item)
+                #print ('item to select %s'%item)
                 item.setSelected(True)
         for item in itemsToDeselect:
             if self.ui.nodesListWidget.isItemSelected(item):
@@ -147,7 +152,6 @@ class ControllerTest(QtWidgets.QMainWindow):
             elif not self.ui.nodesListWidget.isItemSelected(item):
                 pass
            
-
     def closeEvent(self, *event):
         #print (self.isVisible())
         self.windowClosed = 'Window Closing'
@@ -156,7 +160,6 @@ class ControllerTest(QtWidgets.QMainWindow):
     def __windowWasClosed(self):
         print (self.windowClosed)
         self.__removeSelectionCallBack()
-
 
 if __name__ == '__main__':
     
