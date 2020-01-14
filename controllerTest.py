@@ -56,7 +56,7 @@ class ControllerTest(QtWidgets.QMainWindow):
 
         self.__updateUiItemsList()
         self.__updateUiSelection()
-        self.__createSelectionCallBack():
+        self.__createSelectionCallBack()
         self.__createNodeAddRemoceCallBack()
 
         self.ui.nodesListWidget.itemClicked.connect(self._uiItemClicked)
