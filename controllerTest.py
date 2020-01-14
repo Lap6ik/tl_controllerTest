@@ -1,4 +1,5 @@
 from PySide2 import QtCore, QtGui, QtWidgets
+import os, sys
 import pymel.core as pm
 import time
 import maya.OpenMaya as OpenMaya
@@ -59,7 +60,7 @@ class ControllerTest(QtWidgets.QMainWindow):
         self.__createSelectionCallBack()
         self.__createNodeAddRemoceCallBack()
 
-        self.ui.nodesListWidget.itemClicked.connect(self._uiItemClicked)
+        self.ui.nodesListWidget.itemSelectionChanged.connect(self._uiItemClicked)
         self.itemSelectedSignal.connect(self.__fromUiObjectSelect)
         self.objectSelectionFromUIFinished.connect(self.__createSelectionCallBack)
         self.objectSelectedDeselectedSignal.connect(self.__updateUiSelection)
@@ -209,5 +210,5 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication([])  
     win = ControllerTest()   
     win.show()
-    app.exec_()
-
+    #app.exec_()
+    sys.exit(app.exec_())
