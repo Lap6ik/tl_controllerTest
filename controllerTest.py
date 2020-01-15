@@ -28,14 +28,12 @@ def doOpenUI(delete=False):
 
 class ControllerTest(QtWidgets.QMainWindow):
     '''
-    lets see if it works here
+    The Class
     '''
-
-    itemSelectedSignal = QtCore.Signal(str)    
-    objectSelectedDeselectedSignal = QtCore.Signal(str)
-    windowClosedSignal = QtCore.Signal(str)
-    objectSelectionFromUIFinished = QtCore.Signal(str)
-    nodeAddedRemovedSignal = QtCore.Signal(str)
+    changeMayaSelSig = QtCore.Signal(str)
+    changeUiSelSig = QtCore.Signal(str)
+    closeWindowSig = QtCore.Signal(str)
+    refillUiSig = QtCore.Signal(str)    
 
     def __init__(self, parent = None):    
         super(ControllerTest, self).__init__(parent) 
@@ -44,7 +42,6 @@ class ControllerTest(QtWidgets.QMainWindow):
         self.selectionCallBackId = None  
         self.nodeAddCallBackId = None  
         self.nodeRemoveCallBackId = None
-        self.windowClosed = None
 
         self.__buildUi()
     
@@ -54,74 +51,84 @@ class ControllerTest(QtWidgets.QMainWindow):
         ''' 
         self.ui = ui.ControllerTestUI()
         self.ui.create_window(self)
+        
+        #the methods at the UI openning
+        self.__fillTheUi()
+        self.__changeUiSel() 
+        self.__createMayaSelChangedCallBack()
+        self.__createMayaNodeChangedCallBacks()
 
-        self.__updateUiItemsList()
-        self.__updateUiSelection()
-        self.__createSelectionCallBack()
-        self.__createNodeAddRemoceCallBack()
+        #event loop signals
+        self.ui.nodesListWidget.itemSelectionChanged.connect(self._emitChangeMayaSelSig)
 
-        self.ui.nodesListWidget.itemSelectionChanged.connect(self._uiItemClicked)
-        self.itemSelectedSignal.connect(self.__fromUiObjectSelect)
-        self.objectSelectionFromUIFinished.connect(self.__createSelectionCallBack)
-        self.objectSelectedDeselectedSignal.connect(self.__updateUiSelection)
-        self.nodeAddedRemovedSignal.connect(self.__updateUiItemsList)
+        self.changeMayaSelSig.connect(self.__changeMayaSel)
+        self.changeUiSelSig.connect(self.__changeUiSel)       
+        self.refillUiSig.connect(self.__fillTheUi)
+        self.closeWindowSig.connect(self.__windowWasClosed)
 
-        self.windowClosedSignal.connect(self.__windowWasClosed)
-        self.windowClosedSignal.connect(self.close)
 
-    def __createSelectionCallBack(self):
-        self.selectionCallBackId = OpenMaya.MEventMessage.addEventCallback('SelectionChanged', self.__signalSelectionChanged) 
+    def _emitChangeMayaSelSig(self):
+        self.changeMayaSelSig.emit('Selection in UI changed')
 
-    def __removeSelectionCallBack(self):
+    def __createMayaSelChangedCallBack(self):
+        self.selectionCallBackId = OpenMaya.MEventMessage.addEventCallback('SelectionChanged', self.__emitMayaSelChangedSig) 
+
+    def __emitMayaSelChangedSig(self,_):
+        self.changeUiSelSig.emit('Selection in Maya changed')
+
+    def __removeMayaSelChangedCallBack(self):
          OpenMaya.MEventMessage.removeCallback(self.selectionCallBackId)
 
-    def __createNodeAddRemoceCallBack(self):
-        self.nodeAddCallBackId = OpenMaya.MDGMessage.addNodeAddedCallback(self.__signalNodeAddedRemoved, 'mesh')
-        self.nodeRemoveCallBackId = OpenMaya.MDGMessage.addNodeRemovedCallback(self.__signalNodeAddedRemoved, 'mesh')
+    def __createMayaNodeChangedCallBacks(self):
+        self.nodeAddCallBackId = OpenMaya.MDGMessage.addNodeAddedCallback(self.__emitRefillUiSig, 'mesh')
+        self.nodeRemoveCallBackId = OpenMaya.MDGMessage.addNodeRemovedCallback(self.__emitRefillUiSig, 'mesh')
 
-    def __removeNodeAddRemoveCallBack(self):
+    def __emitRefillUiSig(self, *args):
+        self.refillUiSig.emit('Node Added or Removed')
+
+    def __removeMayaNodeChangedCallBacks(self):
         OpenMaya.MDGMessage.removeCallback(self.nodeAddCallBackId)
         OpenMaya.MDGMessage.removeCallback(self.nodeRemoveCallBackId)
 
-    def __signalNodeAddedRemoved(self, *args):
-        self.nodeAddedRemovedSignal.emit('Node Added or Removed')
+    def closeEvent(self, *event):   
+        #print (self.isVisible())
+        self.closeWindowSig.emit('Window Closing')
+
         
-    def __updateUiItemsList(self):
+    def __fillTheUi(self):
         '''
-        The function is called when UI is openned and when new mesh node added or removes from Maya Scene
-        The functiom filles the ui ListWidget with the mesh objects we have in Maya
+        The method evoked by Maya event, by adding or removing 'mesh' node in Maya
+        The only signal of ListWidget('itemSelectionChanged') is blocked to avoid evoking changes back in Maya
+        The method filles the UI ListWidget with mesh objects from Maya
+        'itemSelectionChanged' signal is unblocked back in the end
         '''
+        self.ui.nodesListWidget.blockSignals(True)
+
         self.ui.nodesListWidget.clear()
         self.ui.nodesListWidget.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         meshObjects = pm.ls(dag =True, type = 'mesh')
         for obj in meshObjects:
             transformNode = pm.PyNode(obj)
             self.ui.nodesListWidget.addItem(str(transformNode)) 
+        self.ui.nodesListWidget.blockSignals(False)   
         
-    def _uiItemClicked(self):
-        """
-        Fuction is called when ui item is clicked
-        It removes the 'Selection Changed' callback, we don't want maya callbacks affect the when the ui affecting maya actions ate executed
-        It emits signal that the ui selection is changed
-        """
-        self.__removeSelectionCallBack()
-        self.itemSelectedSignal.emit('Selection in the ui changed')       
-        
-    def __fromUiObjectSelect(self):
+    def __changeMayaSel(self):
         '''
-        Functiom is called when ui selection changed signal is emited
-        It divides all item names in UI on selected and not selected
-        It sets selected in maya items which are selected in the UI
-        And sets deselected in maya items which deselected in the UI
-        It also emits a signal at the end that the selection/deselection happenned (to bring back the Selection Changed callback)
+        The method evoked by ui event, by change of selection of items in ListWidget
+        'SelectionChanged' Maya callback is removed to avoid evoking changes back in the ui
+        The method selects objects in Maya according to recent selection made in ListWidget
+        'SelectionChanged' Maya callback added back in the end 
         '''
+        self.__removeMayaSelChangedCallBack()
+
+        #print ('Maya selection set to update')
+
         itemsInUi = []
         selectedItems = []
         notSelectedItems = []
         a = None
         b = None
         c = None
-
         selectedMeshes = pm.ls(selection = True, dag = True, type = 'transform')
 
         for index in range(self.ui.nodesListWidget.count()):
@@ -139,33 +146,28 @@ class ControllerTest(QtWidgets.QMainWindow):
             if item in selectedMeshes:
                 pass
             else:
-                print ('we are here')
                 pm.select(item, add = True)
         
         for item in notSelectedItems:
             if item in selectedMeshes:
-                print ('to deselect%s'%item)
 
                 pm.select(item, deselect = True)
             else:
                 pass
 
-        self.objectSelectionFromUIFinished.emit('objectSelectionFromUIFinished')
-         
-    def __signalSelectionChanged(self,_):
+        self.__createMayaSelChangedCallBack()
+        
+    def __changeUiSel(self):
         '''
-        Fuction is called when selection in maya is changed
-        It emits the signal that something Selected/Deselected in maya
+        Method evoked by Maya events, by change of selection in Maya, by adding or removing 'mesh' object in Maya
+        The only signal of ListWidget('itemSelectionChanged') is blocked to avoid evoking changes back in Maya
+        The method selects items in the UI according to recent selection made in Maya
+        'itemSelectionChanged' signal is unblocked back in the end
         '''
-        self.objectSelectedDeselectedSignal.emit('Object selected')
+        self.ui.nodesListWidget.blockSignals(True)
 
-    def __updateUiSelection(self):
-        '''
-        Function is called when Selected/Deselected signal is emited
-        It divides the list of items in the Ui on those which corresponding objects selected in Maya and not selected in Maya
-        items which corresponding objects selected in maya are set to select in UI
-        items which corresponding objects not selected in maya are deselected in UI 
-        '''
+        #print ('UI selection set to update')
+
         itemsInUi = []
         selectedMeshes = pm.ls(selection = True, dag = True, type = 'mesh')
         
@@ -174,26 +176,21 @@ class ControllerTest(QtWidgets.QMainWindow):
 
         itemsToSelect = [item for item in itemsInUi if item.text() in selectedMeshes]
         itemsToDeselect = [item for item in itemsInUi if item.text() not in selectedMeshes]
-
+        
         for item in itemsToSelect:
             if self.ui.nodesListWidget.isItemSelected(item):
                 pass
             elif not self.ui.nodesListWidget.isItemSelected(item):
                 item.setSelected(True)
-
+        
         for item in itemsToDeselect:
             if self.ui.nodesListWidget.isItemSelected(item):
                 item.setSelected(False)
             elif not self.ui.nodesListWidget.isItemSelected(item):
                 pass
+        
+        self.ui.nodesListWidget.blockSignals(False)
            
-    def closeEvent(self, *event):
-        '''
-        The function emits signal that the Ui window closing
-        '''
-        #print (self.isVisible())
-        self.windowClosed = 'Window Closing'
-        self.windowClosedSignal.emit(self.windowClosed)
 
     def __windowWasClosed(self):
         '''
@@ -201,14 +198,14 @@ class ControllerTest(QtWidgets.QMainWindow):
         It removes the Selection Changed callback
         and removes the Node Added and Node Removed callbacks
         '''
-        print (self.windowClosed)
-        self.__removeSelectionCallBack()
-        self.__removeNodeAddRemoveCallBack()
+        self.__removeMayaSelChangedCallBack()
+        self.__removeMayaNodeChangedCallBacks()
+        self.close()
+
 
 if __name__ == '__main__':
     
     app = QtWidgets.QApplication([])  
     win = ControllerTest()   
     win.show()
-    #app.exec_()
     sys.exit(app.exec_())

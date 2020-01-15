@@ -5,7 +5,7 @@ class ControllerTestUI(object):
         MainWindow.setObjectName('MainWindow') # Main Window
         self.centralWidget1 = QtWidgets.QWidget(MainWindow) #central widget1
         self.widget1 = QtWidgets.QWidget(self.centralWidget1) #widget1
-        self.nodesListWidget = QtWidgets.QListWidget(self.widget1) #comboBox
+        self.nodesListWidget = QtWidgets.QListWidget(self.widget1) #listWidget
         self.label1 = QtWidgets.QLabel(self.widget1)
         self.label1.setText('Object')
 
@@ -14,7 +14,7 @@ class ControllerTestUI(object):
         self.centralWidget1.setLayout(self.verticalLayout1)
         self.verticalLayout1.addWidget(self.widget1)
     
-        #creating layout for widget_1 and placing label and ComboBox there
+        #creating layout for widget_1 and placing label and ListWidget there
         self.horizontalLayout1 = QtWidgets.QHBoxLayout(self.widget1)
         self.widget1.setLayout(self.horizontalLayout1)
         self.horizontalLayout1.addWidget(self.label1)
